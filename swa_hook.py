@@ -12,14 +12,15 @@ from mmdet.core import DistEvalHook, EvalHook
 @HOOKS.register_module()
 class SWAHook(Hook):
     r"""SWA Object Detection Hook.
+
         This hook works together with SWA training config files to train
         SWA object detectors <https://arxiv.org/abs/2012.12645>.
+
         Args:
             swa_eval (bool): Whether to evaluate the swa model.
                 Defaults to True.
             eval_hook (Hook): Hook class that contains evaluation functions.
                 Defaults to None.
-            swa_interval (int): The epoch interval to perform swa
     """
 
     def __init__(self, swa_eval=True, eval_hook=None, swa_interval=1):
@@ -71,13 +72,13 @@ class SWAHook(Hook):
             optimizer = runner.optimizer
             self.meta['hook_msgs']['last_ckpt'] = filepath
             save_checkpoint(
-                self.model.module,
-                filepath,
-                optimizer=optimizer,
+                self.model.module, 
+                filepath, 
+                optimizer=optimizer, 
                 meta=self.meta)
 
         # evaluate the swa model
-        if self.swa_eval and swa_flag:
+        if self.swa_eval:
             self.work_dir = runner.work_dir
             self.rank = runner.rank
             self.epoch = runner.epoch
@@ -101,8 +102,10 @@ class SWAHook(Hook):
 
 class AveragedModel(torch.nn.Module):
     r"""Implements averaged model for Stochastic Weight Averaging (SWA).
+
     AveragedModel class creates a copy of the provided model on the device
     and allows to compute running averages of the parameters of the model.
+
     Args:
         model (torch.nn.Module): model to use with SWA
         device (torch.device, optional): if provided, the averaged model
