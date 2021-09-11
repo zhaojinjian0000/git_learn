@@ -84,7 +84,11 @@ git commit --amend
 # 如果不想修改上次的提交信息
 git commit --amend --no-edit
 
+# 2021年8月13号不允许使用密码，只能使用token
+# 注册 https://blog.csdn.net/weixin_41010198/article/details/119698015
+# 注册 https://docs.github.com/en/rest/overview/other-authentication-methods#basic-authentication
 
+# 长期保持 git remote set-url origin https://<your_token>@github.com/<USERNAME>/<REPO>.git
 #=============================================================================
 #=============================================================================
 # 五、同步远程版本库到本地版本库
