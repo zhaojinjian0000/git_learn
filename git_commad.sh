@@ -120,3 +120,5 @@ git checkout branch #切换到branch分支
 # 创建分支与切换分支可以简写为一个命令
 gti checkout -b branch
 
+# git 比较两个分支日志和文件的差异
+git diff branch1 branch2 文件名(带路径)  
