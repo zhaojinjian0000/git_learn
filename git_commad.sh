@@ -126,3 +126,7 @@ gti checkout -b branch
 
 # git 比较两个分支日志和文件的差异
 git diff branch1 branch2 文件名(带路径)  
+
+# 查看和某个commit id之间的差异
+git log
+git diff commitid
