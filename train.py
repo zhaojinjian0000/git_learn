@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 import random
 import warnings
 
@@ -14,10 +13,16 @@ from mmdet.core import DistEvalHook, EvalHook
 from mmdet.datasets import (build_dataloader, build_dataset,
                             replace_ImageToTensor)
 from mmdet.utils import get_root_logger
+from mmcv_custom.runner import EpochBasedRunnerAmp
+try:
+    import apex
+except:
+    print('apex is not installed')
 
 
 def set_random_seed(seed, deterministic=False):
     """Set random seed.
+
     Args:
         seed (int): Seed to be used.
         deterministic (bool): Whether to set the deterministic option for
@@ -41,7 +46,7 @@ def train_detector(model,
                    validate=False,
                    timestamp=None,
                    meta=None):
-    logger = get_root_logger(log_level=cfg.log_level)
+    logger = get_root_logger(cfg.log_level)
 
     # prepare data loaders
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
@@ -70,6 +75,23 @@ def train_detector(model,
             seed=cfg.seed) for ds in dataset
     ]
 
+    # build optimizer
+    optimizer = build_optimizer(model, cfg.optimizer)
+
+    # use apex fp16 optimizer
+    if cfg.optimizer_config.get("type", None) and cfg.optimizer_config["type"] == "DistOptimizerHook":
+        if cfg.optimizer_config.get("use_fp16", False):
+            if cfg.optimizer_config.get("opt_level", None):
+                opt_level = cfg.optimizer_config["opt_level"]
+            else:
+                opt_level = "O1"
+
+            model, optimizer = apex.amp.initialize(
+                model.cuda(), optimizer, opt_level=opt_level)
+            for m in model.modules():
+                if hasattr(m, "fp16_enabled"):
+                    m.fp16_enabled = True
+
     # put model on gpus
     if distributed:
         find_unused_parameters = cfg.get('find_unused_parameters', False)
@@ -84,9 +106,6 @@ def train_detector(model,
         model = MMDataParallel(
             model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
 
-    # build runner
-    optimizer = build_optimizer(model, cfg.optimizer)
-
     if 'runner' not in cfg:
         cfg.runner = {
             'type': 'EpochBasedRunner',
@@ -99,6 +118,7 @@ def train_detector(model,
         if 'total_epochs' in cfg:
             assert cfg.total_epochs == cfg.runner.max_epochs
 
+    # build runner
     runner = build_runner(
         cfg.runner,
         default_args=dict(
@@ -147,10 +167,7 @@ def train_detector(model,
         eval_cfg = cfg.get('evaluation', {})
         eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
         eval_hook = DistEvalHook if distributed else EvalHook
-        # In this PR (https://github.com/open-mmlab/mmcv/pull/1193), the
-        # priority of IterTimerHook has been modified from 'NORMAL' to 'LOW'.
-        runner.register_hook(
-            eval_hook(val_dataloader, **eval_cfg), priority='LOW')
+        runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
     # user-defined hooks
     if cfg.get('custom_hooks', None):
